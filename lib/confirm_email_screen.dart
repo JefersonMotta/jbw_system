@@ -10,7 +10,7 @@ class ConfirmEmailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Confirm Your Email'),
+        title: const Text('Confirmar Email'),
       ),
       body: Center(
         child: Container(
@@ -26,24 +26,24 @@ class ConfirmEmailScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                'Verification Email Sent',
+                'Email de Verificação Enviado',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 16),
               Text(
-                'We\'ve sent a verification email to:\n${email ?? "your email address"}',
+                'Enviamos um email de verificação para:\n${email ?? "seu endereço de email"}',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
               const SizedBox(height: 24),
               const Text(
-                'Please check your email and click the verification link to continue.',
+                'Por favor, verifique seu email e clique no link de verificação para continuar.',
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () => Get.offAllNamed('/login'),
-                child: const Text('Return to Login'),
+                child: const Text('Voltar para Login'),
               ),
             ],
           ),

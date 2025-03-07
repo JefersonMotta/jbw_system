@@ -1,10 +1,60 @@
-import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthController extends GetxController {
   final SupabaseClient supabase = Supabase.instance.client;
   final RxBool isLoading = false.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    // Observa mudanças no estado de autenticação
+    supabase.auth.onAuthStateChange.listen((data) {
+      final AuthChangeEvent event = data.event;
+      if (event == AuthChangeEvent.signedIn) {
+        Get.offAllNamed('/home');
+      } else if (event == AuthChangeEvent.signedOut) {
+        Get.offAllNamed('/login');
+      }
+    });
+  }
+
+  Future<void> signUp(String email, String password, String name) async {
+    try {
+      isLoading.value = true;
+
+      final AuthResponse res = await supabase.auth.signUp(
+        email: email,
+        password: password,
+      );
+
+      if (res.user != null) {
+        try {
+          await supabase
+              .from('user_profiles')
+              .insert({'id': res.user!.id, 'email': email, 'nome': name, 'tipo': 'usuario', 'is_admin': false});
+
+          Get.offAllNamed('/confirm-email', parameters: {'email': email});
+        } catch (e) {
+          print('Erro ao criar perfil: $e');
+          Get.snackbar(
+            'Atenção',
+            'Conta criada mas houve erro no perfil',
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }
+      }
+    } catch (e) {
+      print('Erro no cadastro: $e');
+      Get.snackbar(
+        'Erro',
+        'Falha no cadastro: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
 
   Future<void> signIn(String email, String password) async {
     try {
@@ -19,8 +69,8 @@ class AuthController extends GetxController {
       }
     } catch (e) {
       Get.snackbar(
-        'Error',
-        'Login failed: ${e.toString()}',
+        'Erro',
+        'Login falhou: ${e.toString()}',
         snackPosition: SnackPosition.BOTTOM,
       );
     } finally {
@@ -28,71 +78,31 @@ class AuthController extends GetxController {
     }
   }
 
-  Future<void> signUp(String email, String password, String name) async {
+// Método para criar o primeiro admin
+  Future<void> createFirstAdmin(String email, String password, String name) async {
     try {
       isLoading.value = true;
 
-      // Primeiro cria o usuário na autenticação
       final AuthResponse res = await supabase.auth.signUp(
         email: email,
         password: password,
       );
 
       if (res.user != null) {
-        try {
-          // Depois cria o perfil do usuário usando o ID do usuário autenticado
-          await supabase.from('users').upsert({
-            'id': res.user!.id,
-            'email': email,
-            'nome': name,
-            'tipo': 'usuario',
-            'criado_em': DateTime.now().toIso8601String(),
-          });
-
-          // Redireciona para tela de confirmação ou home
-          Get.offAllNamed('/confirm-email', parameters: {'email': email});
-        } catch (erroProfile) {
-          if (kDebugMode) {
-            print('Erro ao criar perfil do usuário: $erroProfile');
-          }
-          Get.snackbar(
-            'Atenção',
-            'Conta criada mas houve erro no perfil. Contate o suporte.',
-            snackPosition: SnackPosition.BOTTOM,
-          );
-        }
+        await supabase
+            .from('user_profiles')
+            .insert({'id': res.user!.id, 'email': email, 'nome': name, 'tipo': 'admin', 'is_admin': true});
       }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Erro no cadastro: $e');
-      }
-      Get.snackbar(
-        'Erro',
-        'Falha no cadastro: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-      );
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Add the signOut method
+  // Método para verificar se o usuário está autenticado
+  bool get isAuthenticated => supabase.auth.currentUser != null;
+
   Future<void> signOut() async {
-    try {
-      await supabase.auth.signOut();
-      Get.offAllNamed('/login');
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Sign out failed: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    }
+    await Supabase.instance.client.auth.signOut();
+    Get.offAllNamed('/login');
   }
-
-  // Get current user
-  User? get currentUser => supabase.auth.currentUser;
-
-  // Check if user is logged in
-  bool get isLoggedIn => currentUser != null;
 }
